@@ -57,9 +57,6 @@ fn main() -> Result<(), String> {
         let wav = AudioSpecWAV::load_wav(Path::new("./wav/Classique.WAV"))
             .expect("Could not load test WAV file");
 
-        println!("{:?}", wav.format);
-        println!("{:?}", wav.buffer().len());
-
         let cvt = AudioCVT::new(
             wav.format,
             wav.channels,
@@ -72,23 +69,16 @@ fn main() -> Result<(), String> {
 
         let data = cvt.convert(wav.buffer().to_vec());
 
-        assert_eq!(data.len() % 4, 0);
-        assert_eq!(data.as_ptr() as usize % std::mem::align_of::<f32>(), 0);
+        let f32_data: Vec<f32> = data
+            .chunks(4)
+            .map(|c| f32::from_ne_bytes(c.try_into().unwrap()))
+            .collect();
 
-        println!("len: {:?}", data.len());
-
-        unsafe {
-            let f32_data = std::slice::from_raw_parts(
-                data.as_ptr() as *const f32,
-                data.len() / std::mem::size_of::<f32>(),
-            );
-
-            Sound {
-                data: f32_data.to_vec(),
-                volume: 0.25,
-                pos: 0.0,
-                period: 0.2,
-            }
+        Sound {
+            data: f32_data,
+            volume: 0.25,
+            pos: 0.0,
+            period: 0.5,
         }
         // initialize the audio callback
     })?;
